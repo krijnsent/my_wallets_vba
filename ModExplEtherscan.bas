@@ -16,10 +16,12 @@ Dim EthAddressA As String
 Dim EthAddressB As String
 Dim EthAddressC As String
 Dim EthAddressD As String
+Dim EthAddressE As String
 EthAddressA = "0x0D5b36603eeDE0792d6fdA1Aca78AD7412fE79aa"  '-> simple older address, all types of transactions
 EthAddressB = "0x2C0f0D5545ceccC6dA8612E47A75D336031d499E"  '-> simple address, no internal tx
 EthAddressC = "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a"  '-> 1000d+ address, not too many transactions
 EthAddressD = "0x4e83362442b8d1bec281594cea3050c8eb01311c"  '-> 1000+ token transactions
+EthAddressE = "0xB22234F7cFeb779a56B56f075B98A27acb117A31" '-> one tx in, one tx out
 
 ' Create a new test suite
 Dim Suite As New TestSuite
@@ -162,6 +164,9 @@ Test.IsOk UBound(TestResult, 2) >= 2
 Test.IsEqual TestResult(3, 1), "address"
 Test.IsEqual LCase(TestResult(3, 2)), LCase(EthAddressA)
 
+TestResult = GetEtherscanTransactions(EthAddressE, Apikey)
+Test.IsEqual UBound(TestResult, 1), 10
+Test.IsOk UBound(TestResult, 2) >= 2
 
 End Sub
 
@@ -281,22 +286,22 @@ Set JsonResT = JsonConverter.ParseJson(TResult)
 If JsonResN("message") = "OK" And JsonResI("message") = "OK" And JsonResT("message") = "OK" Then
     nN = JsonResN("result").Count
     nI = JsonResI("result").Count
-    nt = JsonResT("result").Count
+    nT = JsonResT("result").Count
     cN = 1
     cI = 1
     cT = 1
     If ReturnHeaders Then cZ = 2 Else cZ = 1
-    If nN + nI + nt = 0 Then
+    If nN + nI + nT = 0 Then
         'No results, add placeholder
         ReDim Preserve ResArr(1 To 10, 1 To cZ)
         ResArr(2, cZ) = ts
         ResArr(3, cZ) = Address
         ResArr(10, cZ) = "NO TRANSACTIONS FOUND"
     End If
-    For N = 1 To nN + nI + nt
+    For N = 1 To nN + nI + nT
         If cN <= nN Then tN = JsonResN("result")(cN)("timeStamp") Else tN = 0
         If cI <= nI Then tI = JsonResI("result")(cI)("timeStamp") Else tI = 0
-        If cT <= nt Then tT = JsonResT("result")(cT)("timeStamp") Else tT = 0
+        If cT <= nT Then tT = JsonResT("result")(cT)("timeStamp") Else tT = 0
         
         If tN >= tI And tN >= tT Then
             'JsonResN is most recent
@@ -331,7 +336,7 @@ If JsonResN("message") = "OK" And JsonResI("message") = "OK" And JsonResT("messa
                 ResArr(9, cZ + 1) = "ETH"
                 
                 'Correct for token transaction
-                If cT <= nt And rw("value") = 0 Then
+                If cT <= nT And rw("value") = 0 Then
                     If rw("blockNumber") = JsonResT("result")(cT)("blockNumber") Then
                         If rw("nonce") = JsonResT("result")(cT)("nonce") And LCase(JsonResT("result")(cT)("from")) = LCase(Address) Then
                             ResArr(8, cZ + 1) = 0
@@ -457,7 +462,27 @@ Else
     ReDim Preserve ResArr(1 To 10, 1 To cZ)
     ResArr(2, cZ) = ts
     ResArr(3, cZ) = Address
-    ResArr(10, cZ) = "tx:" & JsonResN("result") & " tx_internal:" & JsonResI("result") & " tx_token:" & JsonResT("result")
+    
+    ResArr(10, cZ) = "tx:"
+    If JsonResN("message") = "OK" Or JsonResN("message") = "No transactions found" Then
+        ResArr(10, cZ) = ResArr(10, cZ) & JsonResN("result").Count
+    Else
+        ResArr(10, cZ) = ResArr(10, cZ) & JsonResN("result")
+    End If
+    
+    ResArr(10, cZ) = ResArr(10, cZ) & " tx_internal:"
+    If JsonResI("message") = "OK" Or JsonResI("message") = "No transactions found" Then
+        ResArr(10, cZ) = ResArr(10, cZ) & JsonResI("result").Count
+    Else
+        ResArr(10, cZ) = ResArr(10, cZ) & JsonResI("result")
+    End If
+    
+    ResArr(10, cZ) = ResArr(10, cZ) & " tx_token:"
+    If JsonResT("message") = "OK" Or JsonResT("message") = "No transactions found" Then
+        ResArr(10, cZ) = ResArr(10, cZ) & JsonResT("result").Count
+    Else
+        ResArr(10, cZ) = ResArr(10, cZ) & JsonResT("result")
+    End If
 End If
 
 GetEtherscanTransactions = ResArr

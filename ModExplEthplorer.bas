@@ -10,6 +10,7 @@ Sub TestEthplorer()
 Dim Suite As New TestSuite
 Suite.Description = "ModExplEthplorer"
 
+'apikey_ethplorer
 
 
 End Sub

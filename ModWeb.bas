@@ -150,25 +150,25 @@ If strMethod = "GET" Then
     
     objHTTP.Send
     If Err.Number = 0 Then
-        If objHTTP.status = "200" Then
+        If objHTTP.Status = "200" Then
             objHTTP.WaitForResponse
             WebRequestURL = objHTTP.responseText
             If Left(WebRequestURL, 1) = "<" Then
-                WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.status), "ERR_TXT", "NO JSON BUT HTML RETURNED"), "RESP_TXT", 0)
+                WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.Status), "ERR_TXT", "NO JSON BUT HTML RETURNED"), "RESP_TXT", 0)
             End If
         Else
             If Left(objHTTP.responseText, 1) = "{" Or Left(objHTTP.responseText, 1) = "[" Then
-                WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", objHTTP.responseText)
+                WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.Status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", objHTTP.responseText)
             Else
-                WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", 0)
+                WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.Status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", 0)
             End If
         End If
     Else
-        If IsEmpty(objHTTP.status) Then
+        If IsEmpty(objHTTP.Status) Then
             WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", Err.Number), "ERR_TXT", Err.Description), "RESP_TXT", 0)
         Else
             'Unknown error, probably no internet connection, answer in JSON
-            WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", objHTTP.responseText)
+            WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.Status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", objHTTP.responseText)
         End If
     End If
     On Error GoTo 0
@@ -192,23 +192,23 @@ ElseIf strMethod = "POST" Or strMethod = "PUT" Or strMethod = "DELETE" Then
     End If
 
     If Err.Number = 0 Then
-        If objHTTP.status = "200" Then
+        If objHTTP.Status = "200" Then
             objHTTP.WaitForResponse
             WebRequestURL = objHTTP.responseText
         Else
             If Left(objHTTP.responseText, 1) = "{" Or Left(objHTTP.responseText, 1) = "[" Then
-                WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", objHTTP.responseText)
+                WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.Status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", objHTTP.responseText)
             Else
-                WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", 0)
+                WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.Status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", 0)
             End If
         End If
     Else
         'Unknown error, probably no internet connection, answer in JSON
-        If IsEmpty(objHTTP.status) Then
+        If IsEmpty(objHTTP.Status) Then
             WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", Err.Number), "ERR_TXT", Err.Description), "RESP_TXT", 0)
         Else
             'Unknown error, probably no internet connection, answer in JSON
-            WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", objHTTP.responseText)
+            WebRequestURL = Replace(Replace(Replace(ErrResp, "ERR_NR", objHTTP.Status), "ERR_TXT", "HTTP-" & objHTTP.StatusText), "RESP_TXT", objHTTP.responseText)
         End If
     End If
     On Error GoTo 0
