@@ -283,7 +283,7 @@ Set JsonResN = JsonConverter.ParseJson(NResult)
 Set JsonResI = JsonConverter.ParseJson(IResult)
 Set JsonResT = JsonConverter.ParseJson(TResult)
 
-If JsonResN("message") = "OK" And JsonResI("message") = "OK" And JsonResT("message") = "OK" Then
+If (JsonResN("message") = "OK" Or JsonResN("message") = "No transactions found") And (JsonResI("message") = "OK" Or JsonResI("message") = "No transactions found") And (JsonResT("message") = "OK" Or JsonResT("message") = "No transactions found") Then
     nN = JsonResN("result").Count
     nI = JsonResI("result").Count
     nT = JsonResT("result").Count
