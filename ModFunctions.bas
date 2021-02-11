@@ -1,4 +1,17 @@
 Attribute VB_Name = "ModFunctions"
+Declare PtrSafe Sub GetSystemTime Lib "kernel32" (ByRef lpSystemTime As SYSTEMTIME)
+
+Type SYSTEMTIME
+  wYear As Integer
+  wMonth As Integer
+  wDayOfWeek As Integer
+  wDay As Integer
+  wHour As Integer
+  wMinute As Integer
+  wSecond As Integer
+  wMilliseconds As Integer
+End Type
+
 'Functions in module:
 'DateToUnixTime - retuns the UnixTime of a date/time
 'UnixTimeToDate - returns the date/time of a UnixTime
@@ -78,6 +91,7 @@ Test.IsEqual TestResult, "https%3A%2F%2Fgithub.com%2Fsearch%3Fq%3Dcrypto_vba%26t
 
 
 'TestDictToString
+'Only works for 1-level Dicts, for multilevel, use JsonConverter.ConvertToJson(testDict)
 Set Test = Suite.Test("TestDictToString")
 Dim testDict As New Dictionary
 
@@ -113,6 +127,32 @@ UrlTxt = "value1=9&value_2=0.154&value_as_string=1.87&commaval_as_str=2,16"
 Test.IsEqual TestResult, UrlTxt
 
 
+'TestSortDict
+Set Test = Suite.Test("TestSortDict")
+
+'Function: Sort dictionaries
+Dim testDict3 As New Dictionary
+'Fill dictionary
+testDict3.Add "d", 9
+testDict3.Add "e", 0.154
+testDict3.Add "c", "1.87"
+testDict3.Add "b", "2,16"
+
+'Sort normally
+Call SortDictByKey(testDict3)
+Test.IsEqual testDict3.Count, 4
+Test.IsEqual testDict3.Keys(0), "b"
+Test.IsEqual testDict3.Keys(3), "e"
+Test.IsEqual testDict3.Items(3), 0.154
+
+'Sort desc
+Call SortDictByKey(testDict3, False)
+Test.IsEqual testDict3.Count, 4
+Test.IsEqual testDict3.Keys(0), "e"
+Test.IsEqual testDict3.Keys(3), "b"
+Test.IsEqual testDict3.Items(3), "2,16"
+
+
 End Sub
 
 Function DateToUnixTime(dt) As Long
@@ -133,7 +173,6 @@ Function UnixTimeToDate(ts As Long) As Date
     
     UnixTimeToDate = DateSerial(1970, 1, intDays + 1) + TimeSerial(intHours, intMins, intSecs)
 End Function
-
 Function CreateNonce(Optional NonceLength As Integer = 12) As String
     
     Dim ScsLng As Long
@@ -147,6 +186,16 @@ Function CreateNonce(Optional NonceLength As Integer = 12) As String
     Else
         CreateNonce = 0
     End If
+
+End Function
+
+Function GetUTCTime() As Date
+
+Dim t As SYSTEMTIME
+Dim currentime As String
+GetSystemTime t
+currentTime = t.wYear & "/" & t.wMonth & "/" & t.wDay & " " & t.wHour & ":" & t.wMinute & ":" & t.wSecond
+GetUTCTime = currentTime
 
 End Function
 
@@ -172,7 +221,7 @@ Public Function URLEncode(StringVal As String, Optional SpaceAsPlus As Boolean =
   Dim StringLen As Long: StringLen = Len(StringVal)
 
   If StringLen > 0 Then
-    ReDim result(StringLen) As String
+    ReDim Result(StringLen) As String
     Dim i As Long, CharCode As Integer
     Dim Char As String, Space As String
 
@@ -183,16 +232,16 @@ Public Function URLEncode(StringVal As String, Optional SpaceAsPlus As Boolean =
       CharCode = Asc(Char)
       Select Case CharCode
         Case 97 To 122, 65 To 90, 48 To 57, 45, 46, 95, 126
-          result(i) = Char
+          Result(i) = Char
         Case 32
-          result(i) = Space
+          Result(i) = Space
         Case 0 To 15
-          result(i) = "%0" & Hex(CharCode)
+          Result(i) = "%0" & Hex(CharCode)
         Case Else
-          result(i) = "%" & Hex(CharCode)
+          Result(i) = "%" & Hex(CharCode)
       End Select
     Next i
-    URLEncode = Join(result, "")
+    URLEncode = Join(Result, "")
   End If
 End Function
 
@@ -239,4 +288,38 @@ DictToString = OutputTxt
 
 End Function
 
+
+Sub SortDictByKey(DictIn As Dictionary, Optional SortAsc As Boolean = True)
+    'Default: sort dictionary Ascending by Key
+    'Inspired by https://excelmacromastery.com/vba-dictionary/#Sorting_the_Dictionary
+    
+    Dim ResDict As New Dictionary
+    Set arrayList = CreateObject("System.Collections.ArrayList")
+    
+    'Exit if DictIn is empty or only has max 1 item
+    If DictIn Is Nothing Then
+        Exit Sub
+    Else
+        If DictIn.Count <= 1 Then
+            Exit Sub
+        End If
+    End If
+    
+    ' Put keys in array and sort (asc/desc)
+    For Each key In DictIn.Keys
+        arrayList.Add key
+    Next key
+    arrayList.Sort
+    If SortAsc = False Then
+        arrayList.Reverse
+    End If
+    
+    'Loop through array
+    For Each va In arrayList
+        ResDict.Add va, DictIn(va)
+    Next va
+    
+    Set DictIn = ResDict
+
+End Sub
 

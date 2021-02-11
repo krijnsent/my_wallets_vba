@@ -1,6 +1,6 @@
 Attribute VB_Name = "ModSrcCryptocompare"
 'Two variables for caching, so the formulas don't update every recalculation
-Public Const CCCacheSeconds = 60   'Nr of seconds cache, default >= 60
+Public Const CCCacheSeconds = 300   'Nr of seconds cache, default >= 60
 Public CCDict As New Scripting.Dictionary
 
 Sub TestSrcCryptocompare()
@@ -46,7 +46,7 @@ TestResult = PublicCryptoCompareData("data/histoday")
 Test.IsOk InStr(TestResult, "Error") > 0
 Set JsonResult = JsonConverter.ParseJson(TestResult)
 Test.IsEqual JsonResult("Response"), "Error"
-Test.IsEqual JsonResult("Message"), "fsym param seems to be missing."
+Test.IsEqual JsonResult("Message"), "fsym is a required param."
 Test.IsEqual JsonResult("Path"), ""
 
 'Error, create a dictionary with ONLY the parameter fsym
@@ -56,7 +56,7 @@ TestResult = PublicCryptoCompareData("data/histoday", Params)
 Test.IsOk InStr(TestResult, "Error") > 0
 Set JsonResult = JsonConverter.ParseJson(TestResult)
 Test.IsEqual JsonResult("Response"), "Error"
-Test.IsEqual JsonResult("Message"), "tsym param seems to be missing."
+Test.IsEqual JsonResult("Message"), "tsym is a required param."
 Test.IsEqual JsonResult("Path"), ""
 
 'Error, add to the same dictionary an unknown tsym
@@ -110,7 +110,7 @@ TestResult = PublicCryptoCompareData("stats/rate/limit")
 Set JsonResult = JsonConverter.ParseJson(TestResult)
 Test.IsEqual JsonResult("Response"), "Success"
 If JsonResult("Response") = "Success" Then
-    Test.IsEqual JsonResult("Data")("calls_made")("minute") + JsonResult("Data")("calls_left")("minute"), 600
+    Test.IsEqual JsonResult("Data")("calls_made")("minute") + JsonResult("Data")("calls_left")("minute"), 300
 End If
 
 'Rate limit WITH an API key: 2500/minute
@@ -125,10 +125,10 @@ End If
 
 Set Test = Suite.Test("TestC_LAST_PRICE")
 JsonResult = C_LAST_PRICE("MYCOIN1", "BLABLA")
-Test.IsEqual JsonResult, "ERROR There is no data for the symbol MYCOIN1 ."
+Test.IsEqual JsonResult, "ERROR cccagg_or_exchange market does not exist for this coin pair (MYCOIN1-BLABLA)"
 
 JsonResult = C_LAST_PRICE("BTC", "BLABLA")
-Test.IsEqual JsonResult, "ERROR There is no data for any of the toSymbols BLABLA ."
+Test.IsEqual JsonResult, "ERROR cccagg_or_exchange market does not exist for this coin pair (BTC-BLABLA)"
 
 JsonResult = C_LAST_PRICE("BTC", "EUR", "An_Unknown_Exchange")
 Test.IsEqual JsonResult, "ERROR an_unknown_exchange market does not exist for this coin pair (BTC-EUR)"
@@ -178,7 +178,7 @@ TestArr = C_ARR_OHLCV("90M", "2FA", "EUR", "ECV")
 Test.IsEqual TestArr(1, 1), "ERROR, DayHourMin aggregation has to be from 1 to 60. Valid values are e.g. 7D, 2H or 30M"
 
 TestArr = C_ARR_OHLCV("H", "ETH", "EUR", "")
-Test.IsEqual TestArr(1, 1), "ERROR ReturnColumns, use the letters ETCHLOFV"
+Test.IsEqual TestArr(1, 1), "ERROR ReturnColumns, use the letters ETHLCOFV"
 
 TestArr = C_ARR_OHLCV("H", "BTC", "EUR", "ABD")
 Test.IsEqual TestArr(1, 1), "unknown ReturnColumn"
@@ -205,7 +205,7 @@ Test.IsEqual UBound(TestArr, 1), 26
 Test.IsEqual UBound(TestArr, 2), 2
 Test.IsEqual TestArr(1, 1), "time"
 Test.IsEqual TestArr(1, 2), "close"
-Test.IsOk TestArr(2, 1) > #12/30/2017#
+Test.IsOk TestArr(2, 1) > #12/30/2019#
 Test.IsOk TestArr(2, 2) > 1
 
 TestArr = C_ARR_OHLCV("H", "XLM", "EUR", "TEOHLCFV", 48, DateSerial(2018, 1, 1), "Kraken")
@@ -215,14 +215,14 @@ Test.IsEqual TestArr(1, 1), "time"
 Test.IsEqual TestArr(1, 8), "volumeto"
 Test.IsEqual TestArr(2, 2), #12/30/2017#
 Test.IsEqual TestArr(50, 2), #1/1/2018#
-Test.IsEqual TestArr(50, 3), 0.01447
+Test.IsEqual TestArr(50, 3), 0.0145
 
 TestArr = C_ARR_OHLCV("4H", "XMR", "BTC", "EC", 48)
 Test.IsEqual UBound(TestArr, 1), 50
 Test.IsEqual UBound(TestArr, 2), 2
 Test.IsEqual TestArr(1, 1), "time"
 Test.IsEqual TestArr(1, 2), "close"
-Test.IsOk TestArr(50, 1) > #1/1/2018#
+Test.IsOk TestArr(50, 1) > #1/1/2020#
 Test.IsOk TestArr(50, 2) > 0
 
 'Flip the result (newest row on top)
@@ -240,7 +240,7 @@ End Sub
 Function PublicCryptoCompareData(Method As String, Optional ParamDict As Dictionary) As String
 
 'For documentation, see: https://min-api.cryptocompare.com/
-Dim Url As String
+Dim url As String
 Dim Apikey As String
 Dim TempData As String
 Dim Sec As Double
@@ -262,7 +262,8 @@ If Not ParamDict Is Nothing Then
 End If
 
 urlPath = Method & MethodParams
-Url = PublicApiSite & urlPath
+url = PublicApiSite & urlPath
+'Debug.Print Url
 
 'For caching, check if data already exists
 IsInDict = CCDict.Exists(urlPath)
@@ -282,7 +283,7 @@ Else
 End If
 
 If GetNewData = True Then
-    TempData = WebRequestURL(Url, "GET", objHeaders)
+    TempData = WebRequestURL(url, "GET", objHeaders)
     CCDict.Add "DATA-" & urlPath, TempData
 Else
     TempData = CCDict("DATA-" & urlPath)
@@ -294,7 +295,7 @@ End Function
 Function C_LAST_PRICE(CurrBuy As String, CurrSell As String, Optional exchange As String, Optional Apikey As String)
 
 Dim PrTxt As String
-Dim json As Object
+Dim Json As Object
 Dim ParamDict As New Dictionary
 Application.Volatile
 
@@ -308,23 +309,23 @@ If Len(Apikey) > 0 Then
 End If
 
 PrTxt = PublicCryptoCompareData("data/price", ParamDict)
-Set json = JsonConverter.ParseJson(PrTxt)
+Set Json = JsonConverter.ParseJson(PrTxt)
 
-If json("Response") = "Error" Then
+If Json("Response") = "Error" Then
     'Error
-    C_LAST_PRICE = "ERROR " & json("Message")
+    C_LAST_PRICE = "ERROR " & Json("Message")
 Else
-    C_LAST_PRICE = json(CurrSell)
+    C_LAST_PRICE = Json(CurrSell)
 End If
 
-Set json = Nothing
+Set Json = Nothing
 
 End Function
 
 Function C_HIST_PRICE(CurrBuy As String, CurrSell As String, DateRates As Date, Optional exchange As String, Optional Apikey As String)
 
 Dim PrTxt As String
-Dim json As Object
+Dim Json As Object
 Dim ParamDict As New Dictionary
 Application.Volatile
 
@@ -340,23 +341,23 @@ If Len(Apikey) > 0 Then
 End If
 
 PrTxt = PublicCryptoCompareData("data/price", ParamDict)
-Set json = JsonConverter.ParseJson(PrTxt)
+Set Json = JsonConverter.ParseJson(PrTxt)
 
-If json("Response") = "Error" Then
+If Json("Response") = "Error" Then
     'Error
-    C_HIST_PRICE = "ERROR " & json("Message")
+    C_HIST_PRICE = "ERROR " & Json("Message")
 Else
-    C_HIST_PRICE = json(CurrSell)
+    C_HIST_PRICE = Json(CurrSell)
 End If
 
-Set json = Nothing
+Set Json = Nothing
 
 End Function
 
 Function C_DAY_AVG_PRICE(CurrBuy As String, CurrSell As String, DateRates As Date, Optional exchange As String, Optional Apikey As String)
 
 Dim PrTxt As String
-Dim json As Object
+Dim Json As Object
 Dim ParamDict As New Dictionary
 Application.Volatile
 
@@ -372,22 +373,22 @@ If Len(Apikey) > 0 Then
 End If
 
 PrTxt = PublicCryptoCompareData("data/dayAvg", ParamDict)
-Set json = JsonConverter.ParseJson(PrTxt)
+Set Json = JsonConverter.ParseJson(PrTxt)
 
-If json("Response") = "Error" Then
+If Json("Response") = "Error" Then
     'Error
-    C_DAY_AVG_PRICE = "ERROR " & json("Message")
+    C_DAY_AVG_PRICE = "ERROR " & Json("Message")
 Else
-    C_DAY_AVG_PRICE = json(CurrSell)
+    C_DAY_AVG_PRICE = Json(CurrSell)
 End If
 
-Set json = Nothing
+Set Json = Nothing
 
 End Function
 
 Function C_ARR_OHLCV(DayHourMin As String, CurrBuy As String, CurrSell As String, ReturnColumns As String, Optional NrLines As Long, Optional MaxTimeDate As Date, Optional exchange As String, Optional ReverseData As Boolean, Optional Apikey As String) As Variant()
 
-'ReturnColumns: variable "TEOHLCFV" -> select columns you want back in the order you want them back, no spaces
+'ReturnColumns: variable "TEOHLC    " -> select columns you want back in the order you want them back, no spaces
 'T = timestamp (unixtime)
 'E = normal excel date/time
 'O = open price
@@ -402,10 +403,19 @@ Dim PrTxt As String
 Dim AggrVal As String
 Dim cmd As String
 Dim utime As Long
-Dim json As Object
+Dim Json As Object
 Dim TempArr As Variant
 Dim ParamDict As New Dictionary
-ColumnOptions = "ETCHLOFV"
+Dim HeadDict As New Dictionary
+ColumnOptions = "ETHLCOFV"
+HeadDict("E") = "time"
+HeadDict("T") = "time"
+HeadDict("H") = "high"
+HeadDict("L") = "low"
+HeadDict("O") = "open"
+HeadDict("C") = "close"
+HeadDict("F") = "volumefrom"
+HeadDict("V") = "volumeto"
 Application.Volatile
 
 If UCase(Right(DayHourMin, 1)) = "D" Then
@@ -453,12 +463,12 @@ If Len(Apikey) > 0 Then
 End If
 
 PrTxt = PublicCryptoCompareData(cmd, ParamDict)
-Set json = JsonConverter.ParseJson(PrTxt)
+Set Json = JsonConverter.ParseJson(PrTxt)
 
-If json("Response") = "Error" Then
+If Json("Response") = "Error" Then
     'Error
     ReDim TempArr(1 To 1, 1 To 1)
-    TempArr(1, 1) = "ERROR " & json("Message")
+    TempArr(1, 1) = "ERROR " & Json("Message")
     C_ARR_OHLCV = TempArr
 Else
     If InStr(PrTxt, """Data"":[]") > 0 Then
@@ -468,7 +478,7 @@ Else
         C_ARR_OHLCV = TempArr
         Exit Function
     End If
-    ResArr = JsonToArray(json)
+    ResArr = JsonToArray(Json)
     ResTbl = ArrayTable(ResArr, True)
     
     ReturnColumns = UCase(Trim(ReturnColumns))
@@ -476,21 +486,28 @@ Else
     If Len(ReturnColumns) > 0 Then
         ReDim TempArr(1 To UBound(ResTbl, 2), 1 To Len(ReturnColumns))
         For i = 1 To Len(ReturnColumns)
-            Itm = Mid(ReturnColumns, i, 1)
-            itmnr = InStr(ColumnOptions, Itm) + 1
+            itm = Mid(ReturnColumns, i, 1)
+            itmnr = 0
+            For c = 1 To UBound(ResTbl, 1)
+                If ResTbl(c, 1) = HeadDict(itm) Then
+                    itmnr = c
+                    Exit For
+                End If
+            Next c
+            
             'Checked for valid column types, move the data to the TempArr
             If itmnr > 1 Then
                 For j = 1 To UBound(ResTbl, 2)
                     j2 = j
                     If ReverseData = True And j > 1 Then j2 = UBound(ResTbl, 2) - j + 2
                     TempArr(j2, i) = ResTbl(itmnr, j)
-                    If itmnr = 2 Then
+                    If itm = "E" Then
                         'Time from Unixtime to normal date/time
                         If j > 1 Then
-                            utime = ResTbl(itmnr + 1, j)
+                            utime = ResTbl(itmnr, j)
                             TempArr(j2, i) = UnixTimeToDate(utime)
                         Else
-                            TempArr(j2, i) = ResTbl(itmnr + 1, j)
+                            TempArr(j2, i) = ResTbl(itmnr, j)
                         End If
                     End If
                 Next j
@@ -510,7 +527,7 @@ Else
     End If
 End If
 
-Set json = Nothing
+Set Json = Nothing
 
 End Function
 

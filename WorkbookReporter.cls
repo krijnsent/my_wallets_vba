@@ -91,7 +91,7 @@ Public Sub Done()
     Dim Failed As Boolean
     Dim Suite As TestSuite
     For Each Suite In pSuites
-        If Suite.result = TestResultType.Fail Then
+        If Suite.Result = TestResultType.Fail Then
             Failed = True
             Exit For
         End If
@@ -141,13 +141,13 @@ Private Sub ClearResults()
     StartRow = pSheet.Range("Output").Row
     StartColumn = pSheet.Range("Output").Column
     
-    Dim LastRow As Long
-    LastRow = StartRow
-    Do While pSheet.Cells(LastRow + 1, StartColumn).Value <> ""
-        LastRow = LastRow + 1
+    Dim lastrow As Long
+    lastrow = StartRow
+    Do While pSheet.Cells(lastrow + 1, StartColumn).Value <> ""
+        lastrow = lastrow + 1
     Loop
     
-    With pSheet.Range(pSheet.Cells(StartRow, StartColumn), pSheet.Cells(LastRow, StartColumn + 1))
+    With pSheet.Range(pSheet.Cells(StartRow, StartColumn), pSheet.Cells(lastrow, StartColumn + 1))
         .Value = ""
         .Font.Bold = False
         .Borders(xlInsideHorizontal).LineStyle = xlNone
@@ -170,12 +170,12 @@ Private Sub DisplayResults()
 
         If Suite.Description <> "" Then
             Headings.Add Rows.Count
-            Rows.Add Array(Suite.Description, ResultTypeToString(Suite.result))
+            Rows.Add Array(Suite.Description, ResultTypeToString(Suite.Result))
         End If
 
         For Each Test In Suite.Tests
-            If Test.result <> TestResultType.Skipped Then
-                Rows.Add Array(Test.Name, ResultTypeToString(Test.result))
+            If Test.Result <> TestResultType.Skipped Then
+                Rows.Add Array(Test.Name, ResultTypeToString(Test.Result))
     
                 For Each Failure In Test.Failures
                     Rows.Add Array("  " & Failure, "")

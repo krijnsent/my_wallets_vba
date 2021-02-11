@@ -36,26 +36,30 @@ Dim Test As TestCase
 Set Test = Suite.Test("TestEtherscanBasics")
 
 'Error, unknown command
-'Put the credentials in a dictionary
+'Put the credentials in a dictionary, start with an empty one
 Dim Params1 As New Dictionary
 TestResult = PublicEtherscan("GET", Params1)
-'{"error_nr":400,"error_txt":"HTTP-Bad Request","response_txt":{"status":"0","result":null,"message":"Params 'module' and 'action' are required parameters"}}
-Test.IsOk InStr(LCase(TestResult), "error") > 0
+'{"status":"0","message":"NOTOK-Missing/Invalid API Key, rate limit of 1/5sec applied","result":"Error! Missing Or invalid Module name"}
+Test.IsOk InStr(LCase(TestResult), "error") > 0, "Invalid module, error 1, result: ${1}"
 Set JsonResult = JsonConverter.ParseJson(TestResult)
-Test.IsEqual JsonResult("status"), "0"
-Test.IsEqual JsonResult("message"), "NOTOK"
-Test.IsEqual JsonResult("result"), "Error! Missing Or invalid Module name"
+Test.IsEqual JsonResult("status"), "0", "Invalid module, error 2, result: ${1}"
+Test.IsEqual JsonResult("message"), "NOTOK-Missing/Invalid API Key, rate limit of 1/5sec applied", "Invalid module, error 3, result: ${1}"
+Test.IsEqual JsonResult("result"), "Error! Missing Or invalid Module name", "Invalid module, error 4, result: ${1}"
 
 'Error, parameter missing
+'Wait for new test to avoid rate limit problems
+Application.Wait (Now + TimeValue("0:00:06"))
 Params1.Add "module", "transaction"
 Params1.Add "action", "gettxinfo"
 TestResult = PublicEtherscan("GET", Params1)
-'{"status":"0","result":null,"message":"Query parameter txhash is required"}
-Test.IsOk InStr(LCase(TestResult), "error") > 0
+'{"status":"0","message":"NOTOK-Missing/Invalid API Key, rate limit of 1/5sec applied","result":"Error! Missing Or invalid Action name"}
+Test.IsOk InStr(LCase(TestResult), "error") > 0, "Invalid action, error 1, result: ${1}"
 Set JsonResult = JsonConverter.ParseJson(TestResult)
-Test.IsEqual JsonResult("status"), "0"
-Test.IsEqual JsonResult("message"), "NOTOK"
+Test.IsEqual JsonResult("status"), "0", "Invalid action, error 1, result: ${1}"
+Test.IsEqual JsonResult("result"), "Error! Missing Or invalid Action name", "Invalid action, error 2, result: ${1}"
 
+'Wait for new test to avoid rate limit problems
+Application.Wait (Now + TimeValue("0:00:06"))
 'Latest block number
 Dim Params2 As New Dictionary
 Params2.Add "module", "proxy"
@@ -63,124 +67,135 @@ Params2.Add "action", "eth_blockNumber"
 Params2.Add "apikey", Apikey
 TestResult = PublicEtherscan("GET", Params2)
 'e.g. {"jsonrpc":"2.0","result":"0x78722b","id":1}
-Test.IsOk InStr(TestResult, "jsonrpc") > 0
+Test.IsOk InStr(TestResult, "jsonrpc") > 0, "Last blocknr, error 1, result: ${1}"
 Set JsonResult = JsonConverter.ParseJson(TestResult)
-Test.IsEqual JsonResult("jsonrpc"), "2.0"
-Test.IsOk JsonResult("id") > 0
+Test.IsEqual JsonResult("jsonrpc"), "2.0", "Last blocknr, error 2, result: ${1}"
+Test.IsOk JsonResult("id") > 0, "Last blocknr, error 3, result: ${1}"
 
 'Test functions
 Set Test = Suite.Test("TestEtherscanBalances")
 'For token balances, use Blockscout, as Etherscan doesn't have an API call for token balances
 'Error address
 TestResult = GetEtherscanBalances("BLA", Apikey)
-Test.IsEqual UBound(TestResult, 1), 4
-Test.IsEqual UBound(TestResult, 2), 2
-Test.IsEqual TestResult(3, 1), "symbol"
-Test.IsEqual TestResult(3, 2), "ERROR"
-Test.IsEqual TestResult(4, 2), "Error! Invalid address format"
+Test.IsEqual UBound(TestResult, 1), 4, "BLA balance, error 1, result: ${1}"
+Test.IsEqual UBound(TestResult, 2), 2, "BLA balance, error 2, result: ${1}"
+Test.IsEqual TestResult(3, 1), "symbol", "BLA balance, error 3, result: ${1}"
+Test.IsEqual TestResult(3, 2), "ERROR", "BLA balance, error 4, result: ${1}"
+Test.IsEqual TestResult(4, 2), "Error! Invalid address format", "BLA balance, error 5, result: ${1}"
 
 'OK, with headers
 TestResult = GetEtherscanBalances(EthAddressA, Apikey)
-Test.IsEqual UBound(TestResult, 1), 4
-Test.IsEqual UBound(TestResult, 2), 2
-Test.IsEqual TestResult(2, 2), EthAddressA
-Test.IsEqual TestResult(3, 2), "ETH"
-Test.IsOk TestResult(4, 2) >= 0
+Test.IsEqual UBound(TestResult, 1), 4, "OK header balance, error 1, result: ${1}"
+Test.IsEqual UBound(TestResult, 2), 2, "OK header balance, error 2, result: ${1}"
+Test.IsEqual TestResult(2, 2), EthAddressA, "OK header balance, error 3, result: ${1}"
+Test.IsEqual TestResult(3, 2), "ETH", "OK header balance, error 4, result: ${1}"
+Test.IsOk TestResult(4, 2) >= 0, "OK header balance, error 5, result: ${1}"
 
 'OK, without headers
 TestResult = GetEtherscanBalances(EthAddressB, Apikey, False)
-Test.IsEqual UBound(TestResult, 1), 4
-Test.IsEqual UBound(TestResult, 2), 1
-Test.IsApproximate TestResult(1, 1), Now(), 10
-Test.IsEqual TestResult(2, 1), EthAddressB
-Test.IsEqual TestResult(3, 1), "ETH"
-Test.IsOk TestResult(4, 1) >= 0
+Test.IsEqual UBound(TestResult, 1), 4, "OK no header balance, error 1, result: ${1}"
+Test.IsEqual UBound(TestResult, 2), 1, "OK no header balance, error 2, result: ${1}"
+Test.IsApproximate TestResult(1, 1), Now(), 10, "OK no header balance, error 3, result: ${1}"
+Test.IsEqual TestResult(2, 1), EthAddressB, "OK no header balance, error 4, result: ${1}"
+Test.IsEqual TestResult(3, 1), "ETH", "OK no header balance, error 5, result: ${1}"
+Test.IsOk TestResult(4, 1) >= 0, "OK no header balance, error 6, result: ${1}"
+
+'Wait for new test to avoid rate limit problems
+Application.Wait (Now + TimeValue("0:00:06"))
 
 Set Test = Suite.Test("TestEtherscanTransactions")
 'Error address
 TestResult = GetEtherscanTransactions("BLA", Apikey)
-Test.IsEqual UBound(TestResult, 1), 10
-Test.IsEqual UBound(TestResult, 2), 2
-Test.IsEqual TestResult(2, 1), "timestamp"
-Test.IsApproximate TestResult(2, 2), Now(), 4
-Test.IsEqual TestResult(3, 1), "address"
-Test.IsEqual TestResult(3, 2), "BLA"
-Test.IsEqual TestResult(10, 2), "tx:Error! Invalid address format tx_internal:Error! Invalid address format tx_token:Error! Invalid address format"
+Test.IsEqual UBound(TestResult, 1), 10, "BLA transactions, error 1, result: ${1}"
+Test.IsEqual UBound(TestResult, 2), 2, "BLA transactions, error 2, result: ${1}"
+Test.IsEqual TestResult(2, 1), "timestamp", "BLA transactions, error 3, result: ${1}"
+Test.IsApproximate TestResult(2, 2), Now(), 4, "BLA transactions, error 4, result: ${1}"
+Test.IsEqual TestResult(3, 1), "address", "BLA transactions, error 5, result: ${1}"
+Test.IsEqual TestResult(3, 2), "BLA", "BLA transactions, error 6, result: ${1}"
+Test.IsEqual TestResult(10, 2), "tx:Error! Invalid address format tx_internal:Error! Invalid address format tx_token:Error! Invalid address format", "BLA transactions, error 7, result: ${1}"
 
+'Wait for new test to avoid rate limit problems
+Application.Wait (Now + TimeValue("0:00:06"))
 'OK address, default settings
 TestResult = GetEtherscanTransactions(EthAddressA, Apikey)
-Test.IsEqual UBound(TestResult, 1), 10
-Test.IsOk UBound(TestResult, 2) >= 2
-Test.IsEqual TestResult(2, 1), "timestamp"
-Test.IsEqual TestResult(3, 1), "address"
+Test.IsEqual UBound(TestResult, 1), 10, "OK tx, error 1, result: ${1}"
+Test.IsOk UBound(TestResult, 2) >= 2, "OK tx, error 2, result: ${1}"
+Test.IsEqual TestResult(2, 1), "timestamp", "OK tx, error 3, result: ${1}"
+Test.IsEqual TestResult(3, 1), "address", "OK tx, error 4, result: ${1}"
 For rw = 2 To UBound(TestResult, 2)
-    Test.IsEqual LCase(TestResult(3, rw)), LCase(EthAddressA)
-    Test.Includes Array("in", "out"), TestResult(5, rw)
-    Test.Includes Array("normal", "int", "token"), TestResult(6, rw)
-    Test.Includes Array("tx", "tx_fee"), TestResult(7, rw)
+    Test.IsEqual LCase(TestResult(3, rw)), LCase(EthAddressA), "OK tx rw:" & rw & ", error 5, result: ${1}"
+    Test.Includes Array("in", "out"), TestResult(5, rw), "OK tx, error 6 rw:" & rw & ", result: ${1}"
+    Test.Includes Array("normal", "int", "token"), TestResult(6, rw), "OK tx rw:" & rw & ", error 7, result: ${1}"
+    Test.Includes Array("tx", "tx_fee"), TestResult(7, rw), "OK tx, error 8 rw:" & rw & ", result: ${1}"
 Next rw
 
 'OK, without headers, EthAddressD has many transactions
 TestResult = GetEtherscanTransactions(EthAddressD, Apikey, False)
-Test.IsEqual UBound(TestResult, 1), 10
-Test.IsOk UBound(TestResult, 2) >= 1000
-Test.NotEqual TestResult(2, 1), "timestamp"
-Test.IsEqual LCase(TestResult(3, 1)), LCase(EthAddressD)
+Test.IsEqual UBound(TestResult, 1), 10, "OK tx big, error 1, result: ${1}"
+Test.IsOk UBound(TestResult, 2) >= 1000, "OK tx big, error 2, result: ${1}"
+Test.NotEqual TestResult(2, 1), "timestamp", "OK tx big, error 3, result: ${1}"
+Test.IsEqual LCase(TestResult(3, 1)), LCase(EthAddressD), "OK tx big, error 4, result: ${1}"
 
 'No token transactions
+'Wait for new test to avoid rate limit problems
+Application.Wait (Now + TimeValue("0:00:06"))
 TestResult = GetEtherscanTransactions(EthAddressA, Apikey, , True, True, False)
-Test.IsEqual UBound(TestResult, 1), 10
-Test.IsOk UBound(TestResult, 2) >= 2
-Test.IsEqual TestResult(3, 1), "address"
-Test.IsEqual LCase(TestResult(3, 2)), LCase(EthAddressA)
+Test.IsEqual UBound(TestResult, 1), 10, "OK tx no tokens, error 1, result: ${1}"
+Test.IsOk UBound(TestResult, 2) >= 2, "OK tx no tokens, error 2, result: ${1}"
+Test.IsEqual TestResult(3, 1), "address", "OK tx no tokens, error 3, result: ${1}"
+Test.IsEqual LCase(TestResult(3, 2)), LCase(EthAddressA), "OK tx no tokens, error 4, result: ${1}"
 For rw = 2 To UBound(TestResult, 2)
-    Test.Includes Array("normal", "int"), TestResult(6, rw)
+    Test.Includes Array("normal", "int"), TestResult(6, rw), "OK tx no tokens rw:" & rw & ", error 5, result: ${1}"
 Next rw
 
 'No internal transactions
 TestResult = GetEtherscanTransactions(EthAddressA, Apikey, , True, False, True)
-Test.IsEqual UBound(TestResult, 1), 10
-Test.IsOk UBound(TestResult, 2) >= 2
-Test.IsEqual TestResult(3, 1), "address"
-Test.IsEqual LCase(TestResult(3, 2)), LCase(EthAddressA)
+Test.IsEqual UBound(TestResult, 1), 10, "OK tx no internal, error 1, result: ${1}"
+Test.IsOk UBound(TestResult, 2) >= 2, "OK tx no internal, error 2, result: ${1}"
+Test.IsEqual TestResult(3, 1), "address", "OK tx no internal, error 3, result: ${1}"
+Test.IsEqual LCase(TestResult(3, 2)), LCase(EthAddressA), "OK tx no internal, error 4, result: ${1}"
 For rw = 2 To UBound(TestResult, 2)
-    Test.Includes Array("normal", "token"), TestResult(6, rw)
+    Test.Includes Array("normal", "token"), TestResult(6, rw), "OK tx no internal, error 5, result: ${1}"
 Next rw
 
+'Wait for new test to avoid rate limit problems
+Application.Wait (Now + TimeValue("0:00:06"))
 'No normal transactions
 TestResult = GetEtherscanTransactions(EthAddressA, Apikey, , False, True, True)
-Test.IsEqual UBound(TestResult, 1), 10
-Test.IsOk UBound(TestResult, 2) >= 2
-Test.IsEqual TestResult(3, 1), "address"
-Test.IsEqual LCase(TestResult(3, 2)), LCase(EthAddressA)
+Test.IsEqual UBound(TestResult, 1), 10, "OK tx no normal, error 1, result: ${1}"
+Test.IsOk UBound(TestResult, 2) >= 2, "OK tx no normal, error 2, result: ${1}"
+Test.IsEqual TestResult(3, 1), "address", "OK tx no normal, error 3, result: ${1}"
+Test.IsEqual LCase(TestResult(3, 2)), LCase(EthAddressA), "OK tx no normal, error 4, result: ${1}"
 For rw = 2 To UBound(TestResult, 2)
-    Test.Includes Array("token", "int"), TestResult(6, rw)
+    Test.Includes Array("token", "int"), TestResult(6, rw), "OK tx no normal, error 5, result: ${1}"
 Next rw
 
+'Wait for new test to avoid rate limit problems
+Application.Wait (Now + TimeValue("0:00:06"))
 'No transactions, empty result
 TestResult = GetEtherscanTransactions(EthAddressA, Apikey, , False, False, False)
-Test.IsEqual UBound(TestResult, 1), 10
-Test.IsOk UBound(TestResult, 2) >= 2
-Test.IsEqual TestResult(3, 1), "address"
-Test.IsEqual LCase(TestResult(3, 2)), LCase(EthAddressA)
+Test.IsEqual UBound(TestResult, 1), 10, "No tx, error 1, result: ${1}"
+Test.IsOk UBound(TestResult, 2) >= 2, "No tx, error 2, result: ${1}"
+Test.IsEqual TestResult(3, 1), "address", "No tx, error 3, result: ${1}"
+Test.IsEqual LCase(TestResult(3, 2)), LCase(EthAddressA), "No tx, error 4, result: ${1}"
 
 TestResult = GetEtherscanTransactions(EthAddressE, Apikey)
-Test.IsEqual UBound(TestResult, 1), 10
-Test.IsOk UBound(TestResult, 2) >= 2
+Test.IsEqual UBound(TestResult, 1), 10, "Tx, error 1, result: ${1}"
+Test.IsOk UBound(TestResult, 2) >= 2, "Tx, error 2, result: ${1}"
 
 End Sub
 
 Function PublicEtherscan(ReqType As String, ParamDict As Dictionary) As String
 
-Dim Url As String
+Dim url As String
 PublicApiSite = "http://api.etherscan.io/api"
 
 MethodParams = DictToString(ParamDict, "URLENC")
 If MethodParams <> "" Then MethodParams = "?" & MethodParams
-Url = PublicApiSite & MethodParams
+url = PublicApiSite & MethodParams
 
 'Debug.Print Url
-PublicEtherscan = WebRequestURL(Url, ReqType)
+PublicEtherscan = WebRequestURL(url, ReqType)
 
 End Function
 
